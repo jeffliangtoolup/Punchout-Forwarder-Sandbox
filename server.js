@@ -28,7 +28,7 @@ function getHeadersAndUrl() {
         'User-Agent': 'Mozilla/5.0'
     };
 
-    const deploymentUrl = '';
+    const deploymentUrl = 'https://855722-sb2.extforms.netsuite.com/app/site/hosting/scriptlet.nl?script=1279&deploy=1&compid=855722_SB2&ns-at=AAEJ7tMQDD9Kd3DnWb6Kdqr9uBaUtGDAcv_ESIC9MtNz6aI7H40';
 
     return { headers, deploymentUrl };
 }
