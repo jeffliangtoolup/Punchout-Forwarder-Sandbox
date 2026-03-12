@@ -35,25 +35,27 @@ function getHeadersAndUrl() {
 
 // POST endpoint to forward the XML data to the external Suitelet
 app.post('/', async (req, res) => {
-    console.log('Received POST request with body:', req.body);
+  const { headers, deploymentUrl } = getHeadersAndUrl();
+  headers['Content-Type'] = 'text/xml';
 
-    const { headers, deploymentUrl } = getHeadersAndUrl();
+  try {
+    const response = await axios.post(deploymentUrl, req.body, {
+      headers,
+      timeout: 25000
+    });
 
-    // Set header to send raw XML
-    headers['Content-Type'] = 'text/xml';
+    res.set('Content-Type', 'text/xml;charset=utf-8');
+    res.status(200).send(response.data);
 
-    try {
-        // Forward the raw XML data to the Suitelet endpoint using Axios
-        const response = await axios.post(deploymentUrl, req.body, { headers });
-        console.log('Forwarded request status code:', response.status);
+  } catch (error) {
+    const status = (error.response && error.response.status) ? error.response.status : 500;
+    const body = (error.response && error.response.data) ? error.response.data : String(error.message);
 
-        // Set the response header to indicate that the returned data is XML
-        res.set('Content-Type', 'text/xml;charset=utf-8');
-        res.send(response.data);
-    } catch (error) {
-        console.error('Error during POST request:', error.message);
-        res.status(500).json({ error: error.message });
-    }
+    // pass through HTML if that's what NetSuite returned
+    res.status(status);
+    res.set('Content-Type', 'text/html;charset=utf-8');
+    res.send(body);
+  }
 });
 
 // Start the server
