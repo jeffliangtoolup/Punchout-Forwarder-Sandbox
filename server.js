@@ -41,7 +41,7 @@ app.post('/', async (req, res) => {
   try {
     const response = await axios.post(deploymentUrl, req.body, {
       headers,
-      timeout: 25000
+      timeout: 500000
     });
 
     res.set('Content-Type', 'text/xml;charset=utf-8');
