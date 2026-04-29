@@ -34,29 +34,50 @@ function getHeadersAndUrl() {
 }
 
 // POST endpoint to forward the XML data to the external Suitelet
+const NETSUITE_TIMEOUT_MS = 28000;
+
 app.post('/', async (req, res) => {
-  const { headers, deploymentUrl } = getHeadersAndUrl();
-  headers['Content-Type'] = 'text/xml';
+    const { headers, deploymentUrl } = getHeadersAndUrl();
+    headers['Content-Type'] = 'text/xml';
 
-  try {
-    const response = await axios.post(deploymentUrl, req.body, {
-      headers,
-      timeout: 500000
-    });
+    try {
+        const response = await axios.post(deploymentUrl, req.body, {
+            headers,
+            timeout: NETSUITE_TIMEOUT_MS
+        });
 
-    res.set('Content-Type', 'text/xml;charset=utf-8');
-    res.status(200).send(response.data);
+        res.set('Content-Type', 'text/xml;charset=utf-8');
+        return res.status(200).send(response.data);
 
-  } catch (error) {
-    const status = (error.response && error.response.status) ? error.response.status : 500;
-    const body = (error.response && error.response.data) ? error.response.data : String(error.message);
+    } catch (error) {
+        const isTimeout =
+            error.code === 'ECONNABORTED' ||
+            String(error.message || '').toLowerCase().includes('timeout');
 
-    // pass through HTML if that's what NetSuite returned
-    res.status(status);
-    res.set('Content-Type', 'text/html;charset=utf-8');
-    res.send(body);
-  }
+        if (isTimeout) {
+            console.warn('NetSuite timed out; returning success to Coupa');
+
+            res.set('Content-Type', 'text/xml;charset=utf-8');
+            return res.status(200).send(buildCoupaSuccess());
+        }
+
+        const status = error.response?.status || 500;
+        const body = error.response?.data || String(error.message);
+
+        res.status(status);
+        res.set('Content-Type', 'text/html;charset=utf-8');
+        return res.send(body);
+    }
 });
+
+function buildCoupaSuccess() {
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<cXML payloadID="${Date.now()}@toolup.com" timestamp="${new Date().toISOString()}">
+  <Response>
+    <Status code="200" text="OK">Order received for processing</Status>
+  </Response>
+</cXML>`;
+}
 
 // Start the server
 const port = process.env.PORT || 3000;
